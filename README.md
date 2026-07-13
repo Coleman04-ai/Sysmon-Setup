@@ -1,192 +1,357 @@
-# 🛡️ Sysmon Setup Guide
+# Sysmon Setup Guide
 
-> **Step-by-step guide: Installing Microsoft Sysmon with SwiftOnSecurity configuration on Windows**
+## Objective
 
-![Status](https://img.shields.io/badge/Status-Working-success)
-![Sysmon](https://img.shields.io/badge/Sysmon-v15.21-blue)
-![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-brightgreen)
-
----
-
-## 📌 What is Sysmon?
-
-**Sysmon** (System Monitor) is a Microsoft Sysinternals tool that logs detailed system activity to Windows Event Viewer. It provides deep visibility that standard Windows logging misses.
-
-### What Sysmon Tracks:
-- ✅ **Process Creation** - Every program that runs (with full command line)
-- ✅ **Network Connections** - Source/destination IP and ports
-- ✅ **File Creation/Deletion** - New files and deleted files
-- ✅ **Registry Changes** - Registry modifications
-- ✅ **DNS Queries** - Domain lookups
-- ✅ **Driver Loading** - Kernel driver activity
+- Deploy Microsoft Sysmon on Windows 10 for enhanced security logging
+- Configure Sysmon using the SwiftOnSecurity configuration
+- Verify process creation, network connection, and file events are being captured
+- Document the setup process for future reference and team knowledge sharing
+- Build a foundation for threat detection and hunting
 
 ---
 
-## 📋 What I Used
+## Investigation Methodology
 
-| Component | Detail |
-|-----------|--------|
-| **System** | Windows 10/11 |
-| **Sysmon Version** | v15.21 |
-| **Configuration** | SwiftOnSecurity |
-| **Install Location** | `C:\Sysmon` |
-| **Log Location** | Microsoft-Windows-Sysmon/Operational |
+### 1. Folder Creation
 
----
-
-## 🔧 Installation Steps (With Screenshots)
-### Step 1: Create Sysmon Folder
-
-Create a folder to store Sysmon files:
+Created a dedicated directory for Sysmon files:
 
 ```powershell
 New-Item -ItemType Directory -Path "C:\Sysmon" -Force
+```
 
-https://1sysmon-folder-creation.png/
+**Output:**
 
-Step 2: Download and Extract Sysmon
-Download Sysmon from Microsoft and extract the ZIP file:
+```
+    Directory: C:\
 
-powershell
-# Download Sysmon (or copy from Downloads)
+Mode    LastWriteTime    Length Name
+----    -------------    ------ ----
+d-----  7/9/2026   1:53 PM           Sysmon
+```
+
+![Step 1: Create Sysmon Folder](screenshots/1sysmon-folder-creation.png)
+
+---
+
+### 2. Download and Extract Sysmon
+
+Downloaded Sysmon from Microsoft Sysinternals and extracted the ZIP file:
+
+```powershell
+# Move Sysmon.zip from Downloads
 Move-Item "$env:USERPROFILE\Downloads\Sysmon.zip" -Destination "C:\Sysmon\" -Force
 
 # Extract the ZIP
 Expand-Archive -Path "C:\Sysmon\Sysmon.zip" -DestinationPath "C:\Sysmon\" -Force
 
-# Download SwiftOnSecurity config
+# Download SwiftOnSecurity configuration
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/SwiftOnSecurity/sysmon-config/master/sysmonconfig-export.xml" -OutFile "C:\Sysmon\config.xml"
 
-# Verify files
+# Verify extracted files
 Get-ChildItem C:\Sysmon\
-Expected files after extraction:
+```
 
-Sysmon64.exe - Main Sysmon executable
+**Output:**
 
-Sysmon.exe - 32-bit version
+```
+    Directory: C:\Sysmon
 
-Eula.txt - License agreement
+Mode    LastWriteTime    Length Name
+----    -------------    ------ ----
+-a----  7/9/2026   1:59 PM    123257 config.xml
+-a----  6/17/2026   7:19 PM      7490 Eula.txt
+-a----  6/17/2026   7:21 PM   6258072 Sysmon.exe
+-a----  6/26/2026   1:33 PM   2881663 Sysmon.zip
+-a----  6/17/2026   7:21 PM   3250120 Sysmon64.exe
+-a----  6/17/2026   7:21 PM   3141024 Sysmon64a.exe
+```
 
-config.xml - SwiftOnSecurity configuration
+**Files extracted:**
+- `Sysmon64.exe` - Main 64-bit executable
+- `Sysmon.exe` - 32-bit version
+- `Eula.txt` - License agreement
+- `config.xml` - SwiftOnSecurity configuration
 
-https://2unzip-sysmon-files.png
+![Step 2: Download and Extract Sysmon](screenshots/2unzip-sysmon-files.png)
 
-Step 3: Install Sysmon
-Run the installation command:
+---
 
-powershell
+### 3. Install Sysmon
+
+Installed Sysmon with the SwiftOnSecurity configuration:
+
+```powershell
 cd C:\Sysmon
 .\Sysmon64.exe -accepteula -i config.xml
-Expected output:
+```
 
-text
+**Output:**
+
+```
 System Monitor v15.21 - System activity monitor
+By Mark Russinovich and Thomas Garnier
+Copyright (C) 2014-2026 Microsoft Corporation
+Using libxml2. libxml2 is Copyright (C) 1998-2012 Daniel Veillard. All Rights Reserved.
+Sysinternals - www.sysinternals.com
+
+Loading configuration file with schema version 4.50
+Sysmon schema version: 4.91
+Configuration file validated.
 Sysmon64 installed.
 SysmonDrv installed.
 Starting SysmonDrv.
 SysmonDrv started.
 Starting Sysmon64.
 Sysmon64 started.
+```
 
-https://3sysmon-installation.png
+![Step 3: Install Sysmon](screenshots/3sysmon-installation.png)
 
-Step 4: Verify Installation
-Check if Sysmon is running and logging events:
+---
 
-powershell
+### 4. Verify Installation
+
+Verified Sysmon was running and logging events:
+
+```powershell
 # Check if Sysmon process is running
 Get-Process Sysmon*
 
-# Check event log
+# Check event log for recent events
 Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -MaxEvents 5
-Expected output:
 
-Sysmon64 process running (PID shown)
+# Check event log status
+Get-WinEvent -ListLog *sysmon*
+```
 
-Events appearing in event log
+**Output:**
 
-https://4sysmon-event-process-verification.png
+```
+Handles  NPM(K)  PM(K)  WS(K)  CPU(s)  Id  SI ProcessName
+-------  ------  -----  -----  ------  --  -- -----------
+    291     528   8048  17112   0.25  18644  0 Sysmon64
+```
 
-Step 5: Test Sysmon
-Generate test events to confirm Sysmon is working:
+```
+   ProviderName: Microsoft-Windows-Sysmon
 
-powershell
-# Test Script
+TimeCreated                      Id LevelDisplayName Message
+-----------                      -- ---------------- -------
+7/9/2026 2:05:25 PM               1 Information      Process Create:...
+7/9/2026 2:05:25 PM               1 Information      Process Create:...
+7/9/2026 2:05:25 PM               1 Information      Process Create:...
+7/9/2026 2:05:25 PM               1 Information      Process Create:...
+7/9/2026 2:05:25 PM               1 Information      Process Create:...
+
+LogName            : Microsoft-Windows-Sysmon/Operational
+MaximumSizeInBytes : 67108864
+RecordCount        : 141
+LogMode            : Circular
+```
+
+**Note:** The Sysmon service did not appear in `services.msc`. This is expected behavior in newer versions—Sysmon runs as a process instead. `Get-Process Sysmon*` is the reliable way to check status.
+
+![Step 4: Verify Installation](screenshots/4sysmon-event-process-verification.png)
+
+---
+
+### 5. Test Event Generation
+
+Generated test events to confirm Sysmon was logging properly:
+
+```powershell
+# Generate Process Creation event (Event ID 1)
 Start-Process notepad.exe
 Start-Sleep -Seconds 2
 Stop-Process -Name notepad -ErrorAction SilentlyContinue
 
+# Generate Network Connection event (Event ID 3)
 Start-Process msedge.exe -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 3
 Stop-Process -Name msedge -ErrorAction SilentlyContinue
 
 # Check recent events
 Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -MaxEvents 5 | Format-Table TimeCreated, Id, LevelDisplayName -AutoSize
-Expected output:
+```
 
-Event ID 1 - Process Creation (Notepad)
+**Output:**
 
-Event ID 3 - Network Connection (Browser)
+```
+=== TESTING SYSMON ===
+✅ Created Event ID 1 (Process Creation)
+✅ Created Event ID 3 (Network Connection)
 
-https://5testing.png
+📊 Recent Sysmon Events:
 
-✅ How to View Logs
-Method 1: Event Viewer (GUI)
-Press Win + R
+TimeCreated              Id LevelDisplayName
+-----------              -- ----------------
+7/9/2026 2:29:38 PM       1 Information
+7/9/2026 2:29:37 PM       1 Information
+7/9/2026 2:29:35 PM       1 Information
+7/9/2026 2:29:35 PM       3 Information
+7/9/2026 2:29:33 PM       1 Information
+```
 
-Type: eventvwr.msc
+**Results:** Event ID 1 (Process Creation) and Event ID 3 (Network Connection) were successfully captured.
 
-Navigate to:
+![Step 5: Test Event Generation](screenshots/5testing.png)
 
-text
-Applications and Services Logs → Microsoft → Windows → Sysmon → Operational
-Method 2: PowerShell
-powershell
-Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -MaxEvents 10
-📊 Important Event IDs
-Event ID	Description	Why It Matters
-1	Process Creation	Detect malware execution
-3	Network Connection	Detect C2 communication
-11	File Creation	Detect malware droppers
-12-14	Registry Changes	Detect persistence
-22	DNS Query	Detect malicious domains
-📝 My Results
-Check	Status	Details
-Installation	✅ Success	Sysmon v15.21 installed
-Process Running	✅ Yes	PID: 18644
-Event Log	✅ Active	141+ events recorded
-Test Events	✅ Generated	Event ID 1 and 3 captured
-Config	✅ Loaded	SwiftOnSecurity
-Sample Event I Captured:
-text
+---
+
+## What It Detects
+
+### Concrete Example: Process Creation (Event ID 1)
+
+One of the most valuable events Sysmon captures is **process creation** with full command-line details.
+
+**Event Captured:**
+
+```
 Event ID: 1 (Process Creation)
 Process: splunk-optimize.exe
 User: SYSTEM
 Time: 2026-07-09 13:33:51
-🔧 Troubleshooting
-❌ Sysmon Not Running
-powershell
-# Reinstall
-cd C:\Sysmon
-.\Sysmon64.exe -u
-.\Sysmon64.exe -accepteula -i config.xml
-❌ No Events in Event Viewer
-Verify Sysmon is running: Get-Process Sysmon*
+Image: C:\Program Files\Splunk\bin\splunk-optimize.exe
+```
 
-Generate test event: Open Notepad
+### MITRE ATT&CK Mapping
 
-Refresh Event Viewer (F5)
+| MITRE Tactic | MITRE Technique | How Sysmon Detects It |
+|--------------|-----------------|----------------------|
+| **Execution** | T1059 - Command and Scripting Interpreter | Event ID 1 captures every process start with full command line |
+| **Execution** | T1047 - Windows Management Instrumentation | WMI process creation events via Event ID 1 |
+| **Persistence** | T1547 - Boot or Logon Autostart Execution | Registry changes via Event ID 12-14 |
+| **Command & Control** | T1071 - Application Layer Protocol | Network connections via Event ID 3 |
 
-⚠️ Service Not Found in services.msc
-This is normal! In newer versions, Sysmon runs as a process, not a service. If Get-Process Sysmon* shows it running, it's working.
+### Why This Matters
 
-🗑️ Uninstall Sysmon
-powershell
-cd C:\Sysmon
-.\Sysmon64.exe -u
-📚 Resources
-Microsoft Sysmon Documentation
+Without Sysmon, Windows Event Log only shows basic process start events (Event ID 4688) with **limited command-line information**. Sysmon provides:
 
-SwiftOnSecurity Config
+- ✅ **Full command-line arguments** (critical for detecting malicious commands)
+- ✅ **Process hashes** (MD5, SHA1, SHA256) for file reputation checks
+- ✅ **Parent process tracking** (identifying suspicious process chains)
+- ✅ **Network connection details** (detecting C2 communication)
 
-Sysmon Event ID Reference
+---
+
+## Key Events Being Logged
+
+| Event ID | Description | MITRE Mapping | Why It's Important |
+|----------|-------------|---------------|-------------------|
+| **1** | Process Creation | T1059 (Execution) | Detect malware execution |
+| **3** | Network Connection | T1071 (C2) | Detect beaconing/C2 traffic |
+| **11** | File Creation | T1105 (Ingress Transfer) | Detect malware drops |
+| **12-14** | Registry Changes | T1547 (Persistence) | Detect persistence mechanisms |
+| **22** | DNS Query | T1071 (C2) | Detect malicious domain lookups |
+
+---
+
+## Takeaways
+
+### What I Learned
+
+**1. Sysmon installation is straightforward once you know the steps.**
+
+The hardest part was finding the correct filename after downloading (the ZIP files had `(1)` and `(2)` suffixes from multiple downloads).
+
+**2. The SwiftOnSecurity config is perfect for beginners.**
+
+It provides comprehensive logging without overwhelming you. It's well-documented and community-vetted.
+
+**3. Service doesn't show in services.msc - and that's OK.**
+
+In newer versions, Sysmon runs as a process, not a service. `Get-Process Sysmon*` is the reliable way to check status.
+
+**4. Testing is essential.**
+
+You can't assume it's working just because installation succeeded. Generating test events (Notepad, browser) confirms everything works.
+
+### What Went Wrong
+
+| Issue | How I Fixed It |
+|-------|---------------|
+| Downloaded multiple ZIP files (`Sysmon (1).zip`, `Sysmon (2).zip`) | Identified and used the original `Sysmon.zip` |
+| Service not showing in `services.msc` | Learned this is expected behavior; used `Get-Process` instead |
+| Initially no events showing | Generated test events to confirm logging |
+
+### Key Insight
+
+> **Sysmon provides visibility that Windows Event Log alone cannot.** The ability to see full command lines, process hashes, and network connections is essential for detecting modern threats. This setup is the foundation for building effective detection rules.
+
+---
+
+## Next Steps: Building a Detection
+
+### Sigma Rule for Event ID 1 (Suspicious Process Creation)
+
+A Sigma rule converts your logging into a detection. Here's a Sigma rule for detecting suspicious PowerShell execution:
+
+```yaml
+title: Suspicious PowerShell Execution with Encoded Command
+id: 00000000-0000-0000-0000-000000000000
+status: experimental
+description: Detects PowerShell execution with encoded command (common malware technique)
+references:
+    - https://attack.mitre.org/techniques/T1059/001/
+author: Coleman04-ai
+date: 2026-07-09
+logsource:
+    product: windows
+    service: sysmon
+    definition: Sysmon Event ID 1 - Process Creation
+detection:
+    selection:
+        EventID: 1
+        Image|endswith: '\powershell.exe'
+        CommandLine|contains: '-EncodedCommand'
+    condition: selection
+falsepositives:
+    - Legitimate administrative scripts using encoded commands
+level: medium
+tags:
+    - attack.execution
+    - attack.t1059.001
+```
+
+### How This Sigma Rule Works
+
+| Component | Explanation |
+|-----------|-------------|
+| **EventID: 1** | Looks for process creation events |
+| **Image\|endswith: '\powershell.exe'** | Specifically targets PowerShell |
+| **CommandLine\|contains: '-EncodedCommand'** | Flags base64-encoded commands (common obfuscation technique) |
+| **Level: medium** | Alert severity level |
+
+This detection would fire when Sysmon logs a PowerShell process with an encoded command, helping you identify potential malicious activity.
+
+---
+
+## Resources
+
+- [Microsoft Sysmon Documentation](https://docs.microsoft.com/en-us/sysinternals/downloads/sysmon)
+- [SwiftOnSecurity Config](https://github.com/SwiftOnSecurity/sysmon-config)
+- [Sysmon Event ID Reference](https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/)
+- [Sigma Rules Guide](https://github.com/SigmaHQ/sigma)
+- [MITRE ATT&CK Framework](https://attack.mitre.org/)
+
+---
+
+## Repository Structure
+
+```
+📁 Sysmon-Setup/
+├── 📄 README.md (this file)
+├── 📁 screenshots/
+│   ├── 1sysmon-folder-creation.png
+│   ├── 2unzip-sysmon-files.png
+│   ├── 3sysmon-installation.png
+│   ├── 4sysmon-event-process-verification.png
+│   └── 5testing.png
+└── 📁 sigma-rules/
+    └── suspicious-powershell-encodedcommand.yml
+```
+
+---
+
+**Documented on: 2026-07-09 | Sysmon v15.21**
